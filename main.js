@@ -2,7 +2,12 @@ const express= require("express");
 const res = require("express/lib/response");
 const app= express();
 const fs = require('fs');
+const passport = require("passport");
+require("./database");
+require("./passport");
+require("./auth");
 const winston = require('winston');
+const jwt = require("jsonwebtoken");
 const logger = winston.createLogger({
     level: 'info',
     format: winston.format.json(),
@@ -17,6 +22,31 @@ const logger = winston.createLogger({
     ],
   });
   
+app.post('/login', function (req, res, next) {
+    passport.authenticate('local', {session: false}, (err, user, info) => {
+        if (err || !user) {
+            return res.status(400).json({
+                message: 'Something is not right',
+                user   : user,
+            });
+        }
+       req.login(user, {session: false}, (err) => {
+           if (err) {
+               res.send(err);
+           }
+           // generate a signed son web token with the contents of user object and return it in the response
+           const token = jwt.sign(user, 'your_jwt_secret');
+           return res.json({user, token});
+        });
+    })(req, res);
+});
+app.get(
+    '/userdetails',
+    passport.authenticate("jwt",{session:false}),
+    (req,res)=>{
+        res.send(req.user);
+    }
+);
   //
   // If we're not in production then log to the `console` with the format:
   // `${info.level}: ${info.message} JSON.stringify({ ...rest }) `
@@ -43,7 +73,7 @@ const div=(n1,n2)=>{
     return n1/n2;
     }
 }
-app.get("/add", (req,res)=>{
+app.get("/add",passport.authenticate("jwt",{session:false}), (req,res)=>{
     try{
     const n1= parseFloat(req.query.n1);
     const n2=parseFloat(req.query.n2);
@@ -68,7 +98,7 @@ app.get("/add", (req,res)=>{
         res.status(500).json({statuscocde:500, msg: error.toString() })
       }
 });
-app.get("/multi", (req,res)=>{
+app.get("/multi",passport.authenticate("jwt",{session:false}), (req,res)=>{
     try{
     const n1= parseFloat(req.query.n1);
     const n2=parseFloat(req.query.n2);
@@ -94,7 +124,7 @@ app.get("/multi", (req,res)=>{
         res.status(500).json({statuscocde:500, msg: error.toString() })
       }
 });
-app.get("/div", (req,res)=>{
+app.get("/div",passport.authenticate("jwt",{session:false}), (req,res)=>{
     try{
     const n1= parseFloat(req.query.n1);
     const n2=parseFloat(req.query.n2);
@@ -119,7 +149,7 @@ app.get("/div", (req,res)=>{
         res.status(500).json({statuscocde:500, msg: error.toString() })
       }
 });
-app.get("/sub", (req,res)=>{
+app.get("/sub",passport.authenticate("jwt",{session:false}), (req,res)=>{
     try{
     const n1= parseFloat(req.query.n1);
     const n2=parseFloat(req.query.n2);
@@ -148,3 +178,4 @@ const port=3000;
 app.listen(port,()=> {
     console.log("hello i'm listening to port " +port);
 })
+
